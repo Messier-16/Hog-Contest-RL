@@ -28,7 +28,7 @@ def free_bacon(score):
     return 10-min(a,b)
 
 
-def take_turn(num_rolls, opponent_score, dice=six_sided):
+def take_turn_helper(num_rolls, opponent_score, dice=six_sided):
     assert type(num_rolls) == int, 'num_rolls must be an integer.'
     assert num_rolls >= 0, 'Cannot roll a negative number of dice in take_turn.'
     assert num_rolls <= 10, 'Cannot roll more than 10 dice.'
@@ -56,39 +56,25 @@ def is_swap(player_score, opponent_score):
     else:
         return False
 
-def fullgame(strategy0, strategy1, score0=0, score1=0, dice=six_sided,
-         goal=GOAL_SCORE, say=silence, feral_hogs=True):
-    if feral_hogs==False:
-        while score0<goal and score1<goal:
-            score0 += take_turn(strategy0(score0,score1),score1,dice)
-            if is_swap(score0,score1):
-                score0,score1=score1,score0
-            if score0 >= goal or score1 >= goal: break
-            score1 += take_turn(strategy1(score1,score0),score0,dice)
-            if is_swap(score0, score1):
-                score0, score1 = score1, score0
-        return(score0,score1)
-    else:
-        prev0=0
-        prev1=0
-        while score0<goal and score1<goal:
-            new0=strategy0(score0,score1)
-            score0 += take_turn(new0,score1,dice)
-            if abs(new0-prev0)==2:
-                score0+=3
-            if is_swap(score0,score1):
-                score0,score1=score1,score0
-            say = say(score0, score1)
-            if score0 >= goal or score1 >= goal: break
-            new1=strategy1(score1,score0)
-            score1 += take_turn(new1,score0,dice)
-            if abs(new1 - prev1) == 2:
-                score1 += 3
-            if is_swap(score0, score1):
-                score0, score1 = score1, score0
-            say = say(score0, score1)
-            prev0, prev1 = new0, new1
-        return(score0,score1)
+def take_turn0(num_rolls, score0=0, score1=0, dice=six_sided):
+    new0=num_rolls
+    score0 += take_turn(new0,score1,dice)
+    if abs(new0-prev0)==2:
+        score0+=3
+    if is_swap(score0,score1):
+        score0,score1=score1,score0
+    prev0 = new0
+    return score0, score1, prev0, prev1
+
+def take_turn1(num_rolls, score0=0, score1=0, dice=six_sided):
+    new1=num_rolls
+    score1 += take_turn(new1,score0,dice)
+    if abs(new1 - prev1) == 2:
+        score1 += 3
+    if is_swap(score0, score1):
+        score0, score1 = score1, score0
+    prev1 = new1
+    return score0, score1, prev0, prev1
 
 # V1 Features: score, opponent
 # V2 Features: free_bacon(opponent)
@@ -124,8 +110,11 @@ class State:
     def availablePositions(self):
         return [i for i in range(11)]
 
-    def updateState(self, position):
-        self.board[position] = self.playerSymbol
+    def updateState(self, num_rolls):
+        if self.playerSymbol == 1:
+            self.board[0], self.board[1], prev0, prev1 = take_turn0(num_rolls, self.board[0], self.board[1])
+        else:
+            self.board[0], self.board[1], prev0, prev1 = take_turn1(num_rolls, self.board[0], self.board[1])
         # switch to another player
         self.playerSymbol = -1 if self.playerSymbol == 1 else 1
 
@@ -140,8 +129,8 @@ class State:
             self.p1.feedReward(0)
             self.p2.feedReward(1)
         else:
-            self.p1.feedReward(0.1)
-            self.p2.feedReward(0.5)
+            self.p1.feedReward(0.1) # Why are these nonzero, should be 0 since no one won?
+            self.p2.feedReward(0.5) # Why are these nonzero, should be 0 since no one won?
 
     # board reset
     def reset(self):
@@ -229,7 +218,7 @@ class Player:
                 if value >= value_max:
                     value_max = value
                     action = p
-        # print("{} takes action {}".format(self.name, action))
+        print("{} takes action {}".format(self.name, action))
         return action
 
     # append a hash state

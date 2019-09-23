@@ -95,14 +95,14 @@ def make_averaged(fn, num_samples=1000):
 # V3 Features: swapmult(opponent)
 
 games = 100
-lr =
+lr = 0.1
 gamma = 0.75
 Q = np.zeros((101, 101, 11))
 # Need to convert this to a dictionary at the end
 
 def update(score0, score1, action): # this is unfinished
     # Update q values (this is unfinished)
-    Q[score0, score1, action] = Q[score0, score1, action] + (lr * (reward + gamma * np.max(Q[new_state, :])) - Q[state, action])
+    Q[score0, score1, action] = Q[score0, score1, action] + (lr * (1 + gamma * np.max(Q[new_state, :])) - Q[state, action])
 
 for i in range(games):
     record0, record1 = [], []
@@ -112,9 +112,11 @@ for i in range(games):
     while True:
         if random.uniform(0, 1) < epsilon or score0==0:
             randrolls = random.randint(0,10)
+            record0.append([score0,score1,randrolls])
             score0, score1, prev0 = complete_turn(randrolls, score0, score1, prev0)
         else:
             qrolls = np.argmax(Q[score0,score1,:])
+            record0.append([score0, score1, qrolls])
             score0, score1, prev0 = complete_turn(qrolls, score0, score1, prev0)
 
         if score0>=100:
@@ -126,9 +128,11 @@ for i in range(games):
 
         if random.uniform(0, 1) < epsilon or score1==0:
             randrolls = random.randint(0, 10)
+            record1.append([score0, score1, randrolls])
             score0, score1, prev1 = complete_turn(randrolls, score0, score1, prev1)
         else:
             qrolls = np.argmax(Q[score0, score1, :])
+            record1.append([score0, score1, qrolls])
             score0, score1, prev01 = complete_turn(qrolls, score0, score1, prev1)
 
         if score0>=100:
@@ -137,5 +141,3 @@ for i in range(games):
         elif score1>=100:
             for i in record1:
                 update(i[0],i[1],i[2])
-
-

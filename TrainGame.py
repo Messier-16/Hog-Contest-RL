@@ -83,6 +83,25 @@ def take_turn1(num_rolls, score0, score1, prev_num_rolls, dice=six_sided):
     prev_num_rolls = new1
     return score0, score1, prev_num_rolls
 
+def make_averaged(fn, num_samples=1000):
+    """Return a function that returns the average value of FN when called.
+
+    To implement this function, you will have to use *args syntax, a new Python
+    feature introduced in this project.  See the project description.
+
+    >>> dice = make_test_dice(4, 2, 5, 1)
+    >>> averaged_dice = make_averaged(dice, 1000)
+    >>> averaged_dice()
+    3.0
+    """
+    # BEGIN PROBLEM 8
+    def average(*args):
+        value = 0
+        for x in range(num_samples):
+            value += fn(*args)
+        return value / num_samples
+    return average
+    # END PROBLEM 8
 
 # V1 Features: score, opponent
 # V2 Features: free_bacon(opponent)
@@ -154,7 +173,7 @@ class State:
             while not self.isEnd:
                 # Player 1
                 positions = self.availablePositions()
-                p1_action = self.p1.chooseAction(positions, self.board, self.playerSymbol)
+                p1_action = self.p1.chooseAction(positions, self)
                 # take action and upate board state
                 self.updateState(p1_action)
                 board_hash = self.getHash()
@@ -174,7 +193,7 @@ class State:
                 else:
                     # Player 2
                     positions = self.availablePositions()
-                    p2_action = self.p2.chooseAction(positions, self.board, self.playerSymbol)
+                    p2_action = self.p2.chooseAction(positions, self)
                     self.updateState(p2_action)
                     board_hash = self.getHash()
                     self.p2.addState(board_hash)
@@ -211,7 +230,14 @@ class Player:
                 boardHash += (str(i))
         return boardHash
 
-    def chooseAction(self, positions, current_board, symbol):
+    def get_value(self, num_rolls, board):
+        next_board = board.deepcopy()
+        next_board.updateState(num_rolls)
+        next_boardHash = self.getHash(next_board)
+        value = 0 if self.states_value.get(next_boardHash) is None else self.states_value.get(next_boardHash)
+        return value
+
+    def chooseAction(self, positions, board):
         if np.random.uniform(0, 1) <= self.exp_rate:
             # take random action
             idx = np.random.choice(len(positions))
@@ -219,12 +245,11 @@ class Player:
         else:
             value_max = -999
             for p in positions:
-                next_board = current_board.copy()
-                next_board[p] = symbol
-                next_boardHash = self.getHash(next_board)
-                value = 0 if self.states_value.get(next_boardHash) is None else self.states_value.get(
-                    next_boardHash)
-                # print("value", value)
+                if p == 0:
+                    value = self.get_value(p, board)
+                else:
+                    averaged_value = make_averaged(self.get_value, num_samples=1000)
+                    value = averaged_value(p)
                 if value >= value_max:
                     value_max = value
                     action = p

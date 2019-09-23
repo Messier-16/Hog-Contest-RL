@@ -113,10 +113,12 @@ for i in range(games):
             randrolls = random.randint(0,10)
             record0.append([score0,score1,randrolls])
             score0, score1, prev0 = complete_turn(randrolls, score0, score1, prev0)
+            score0, score1, prev1 = int(round(score0)), int(round(score1)), int(round(prev0))
         else:
-            qrolls = np.argmax(Q[score0,score1,:])
+            qrolls = int(np.argmax(Q[score0,score1,:]))
             record0.append([score0, score1, qrolls])
             score0, score1, prev0 = complete_turn(qrolls, score0, score1, prev0)
+            score0, score1, prev1 = int(round(score0)), int(round(score1)), int(round(prev0))
 
         if score0>=100:
             for i in range(len(record0)-1):
@@ -129,10 +131,13 @@ for i in range(games):
             randrolls = random.randint(0, 10)
             record1.append([score0, score1, randrolls])
             score0, score1, prev1 = complete_turn(randrolls, score0, score1, prev1)
+            score0, score1, prev1 = int(round(score0)), int(round(score1)), int(round(prev1))
         else:
-            qrolls = np.argmax(Q[score0, score1, :])
+            qrolls = int(np.argmax(Q[score0, score1, :]))
+            print(qrolls)
             record1.append([score0, score1, qrolls])
             score0, score1, prev01 = complete_turn(qrolls, score0, score1, prev1)
+            score0, score1, prev1 = int(round(score0)), int(round(score1)), int(round(prev1))
 
         if score0>=100:
             for i in range(len(record0) - 1):

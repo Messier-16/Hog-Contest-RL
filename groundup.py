@@ -98,6 +98,7 @@ games = 100
 lr =
 gamma = 0.75
 Q = np.zeros((101, 101, 11))
+# Need to convert this to a dictionary at the end
 
 def update(score0, score1, action):
     # Update q values

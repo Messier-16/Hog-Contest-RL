@@ -100,11 +100,12 @@ gamma = 0.75
 Q = np.zeros((101, 101, 11))
 # Need to convert this to a dictionary at the end
 
-def update(score0, score1, action):
-    # Update q values
+def update(score0, score1, action): # this is unfinished
+    # Update q values (this is unfinished)
     Q[score0, score1, action] = Q[score0, score1, action] + (lr * (reward + gamma * np.max(Q[new_state, :])) - Q[state, action])
 
 for i in range(games):
+    record0, record1 = [], []
     score0, score1, prev0, prev1 = 0, 0, 0, 0
     epsilon = 0.2
 
@@ -117,10 +118,11 @@ for i in range(games):
             score0, score1, prev0 = complete_turn(qrolls, score0, score1, prev0)
 
         if score0>=100:
-            winner = 0
-
+            for i in record0:
+                update(i[0],i[1],i[2])
         elif score1>=100:
-            winner = 1
+            for i in record1:
+                update(i[0],i[1],i[2])
 
         if random.uniform(0, 1) < epsilon or score1==0:
             randrolls = random.randint(0, 10)
@@ -129,9 +131,11 @@ for i in range(games):
             qrolls = np.argmax(Q[score0, score1, :])
             score0, score1, prev01 = complete_turn(qrolls, score0, score1, prev1)
 
-        if score0 >= 100:
-            winner = 0
-        elif score1 >= 100:
-            winner = 1
+        if score0>=100:
+            for i in record0:
+                update(i[0],i[1],i[2])
+        elif score1>=100:
+            for i in record1:
+                update(i[0],i[1],i[2])
 
 

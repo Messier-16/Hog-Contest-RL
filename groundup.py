@@ -30,17 +30,14 @@ def make_averaged(fn, num_samples=1000):
     >>> averaged_dice()
     3.0
     """
-    # BEGIN PROBLEM 8
     def average(*args):
         value = 0
         for x in range(num_samples):
             value += fn(*args)
         return value / num_samples
     return average
-    # END PROBLEM 8
 
 def free_bacon(score):
-    print(score)
     assert score < 100, 'The game should be over.'
     if score < 10:
         return 10
@@ -95,7 +92,7 @@ def complete_turn(num_rolls, score0, score1, prev_num_rolls, dice=six_sided):
 # V3 Features: swapmult(opponent)
 
 lr = 0.1
-gamma = 0.75
+gamma = 0.
 Q = np.zeros((101, 101, 11))
 # Need to convert this to a dictionary at the end
 
@@ -124,39 +121,36 @@ def main(games):
                 score0, score1, prev1 = int(round(score0)), int(round(score1)), int(round(prev0))
                 if score0>100: score0=100
                 if score1>100: score1=100
-
             if score0>=100:
                 for i in range(len(record0)-1):
                     update(record0[i][0],record0[i][1],record0[i][2], record0[i+1][0], record0[i+1][1])
-                    break
+                break
             elif score1>=100:
                 for i in range(len(record1)-1):
                     update(record1[i][0],record1[i][1],record1[i][2], record1[i+1][0], record1[i+1][1])
-                    break
+                break
 
             if random.uniform(0, 1) < epsilon or score1==0:
                 randrolls = random.randint(0, 10)
                 record1.append([score0, score1, randrolls])
-                score0, score1, prev1 = complete_turn(randrolls, score0, score1, prev1)
-                score0, score1, prev1 = int(round(score0)), int(round(score1)), int(round(prev1))
+                score1, score0, prev1 = complete_turn(randrolls, score1, score0, prev1)
+                score1, score0, prev1 = int(round(score1)), int(round(score0)), int(round(prev1))
                 if score0>100: score0=100
                 if score1>100: score1=100
             else:
                 qrolls = int(np.argmax(Q[score0, score1, :]))
-                print(qrolls)
                 record1.append([score0, score1, qrolls])
-                score0, score1, prev01 = complete_turn(qrolls, score0, score1, prev1)
-                score0, score1, prev1 = int(round(score0)), int(round(score1)), int(round(prev1))
+                score1, score0, prev1 = complete_turn(qrolls, score1, score0, prev1)
+                score1, score0, prev1 = int(round(score1)), int(round(score0)), int(round(prev1))
                 if score0>100: score0=100
                 if score1>100: score1=100
-
             if score0>=100:
                 for i in range(len(record0) - 1):
                     update(record0[i][0], record0[i][1], record0[i][2], record0[i + 1][0], record0[i + 1][1])
-                    break
+                break
             elif score1 >= 100:
                 for i in range(len(record1) - 1):
                     update(record1[i][0], record1[i][1], record1[i][2], record1[i + 1][0], record1[i + 1][1])
-                    break
+                break
 
-main(10)
+main(100)

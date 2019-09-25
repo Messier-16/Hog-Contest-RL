@@ -1,7 +1,16 @@
-from dice import six_sided, four_sided, make_test_dice
-from ucb import main, trace, interact
+from tqdm import tqdm
 import numpy as np
 import random
+
+def make_fair_dice(sides):
+    """Return a die that returns 1 to SIDES with equal chance."""
+    assert type(sides) == int and sides >= 1, 'Illegal value for sides'
+    def dice():
+        return random.randint(1,sides)
+    return dice
+
+four_sided = make_fair_dice(4)
+six_sided = make_fair_dice(6)
 
 GOAL_SCORE = 100  # The goal of Hog is to score 100 points.
 
@@ -53,7 +62,7 @@ def take_turn(num_rolls, opponent_score, dice=six_sided):
     assert opponent_score < 100, 'The game should be over.'
 
     if num_rolls != 0:
-        return make_averaged(roll_dice)(num_rolls, dice)
+        return roll_dice(num_rolls, dice)
     else:
         return free_bacon(opponent_score)
 
@@ -77,9 +86,19 @@ def is_swap(player_score, opponent_score):
     else:
         return False
 
-def complete_turn(num_rolls, score0, score1, prev_num_rolls, dice=six_sided):
+def complete_turn0(num_rolls, score0, score1, prev_num_rolls, dice=six_sided):
     new0 = num_rolls
     score0 += take_turn(new0, score1, dice)
+    if abs(new0 - prev_num_rolls) == 2:
+        score0 += 3
+    if is_swap(score0, score1):
+        score0, score1 = score1, score0
+    prev_num_rolls = new0
+    return score0, score1, prev_num_rolls
+
+def complete_turn1(num_rolls, score0, score1, prev_num_rolls, dice=six_sided):
+    new0 = num_rolls
+    score1 += take_turn(new0, score0, dice)
     if abs(new0 - prev_num_rolls) == 2:
         score0 += 3
     if is_swap(score0, score1):
@@ -91,16 +110,20 @@ def complete_turn(num_rolls, score0, score1, prev_num_rolls, dice=six_sided):
 # V2 Features: free_bacon(opponent)
 # V3 Features: swapmult(opponent)
 
-lr = 0.1
-gamma = 0.
+lr = 0.6
+gamma = 0.95
 Q = np.zeros((101, 101, 11))
 # Need to convert this to a dictionary at the end
 
 def update(score0, score1, action, nextscore0, nextscore1):
+    print(score0,score1,action)
     Q[score0, score1, action] = Q[score0, score1, action] + (lr * (1 + gamma * np.max(Q[nextscore0, nextscore1, :]) - Q[score0, score1, action]))
+    if score0>0 or score1>0: print(Q[score0, score1, action])
 
 def main(games):
-    for i in range(games):
+    for i in tqdm(range(games)):
+        if i % 10 == 0:
+          print("---------------- SIMULATING GAME {} ----------------".format(i))
         record0 = []
         record1 = []
         score0, score1, prev0, prev1 = 0, 0, 0, 0
@@ -110,14 +133,14 @@ def main(games):
             if random.uniform(0, 1) < epsilon or score0==0:
                 randrolls = random.randint(0,10)
                 record0.append([score0,score1,randrolls])
-                score0, score1, prev0 = complete_turn(randrolls, score0, score1, prev0)
+                score0, score1, prev0 = complete_turn0(randrolls, score0, score1, prev0)
                 score0, score1, prev1 = int(round(score0)), int(round(score1)), int(round(prev0))
                 if score0>100: score0=100
                 if score1>100: score1=100
             else:
                 qrolls = int(np.argmax(Q[score0,score1,:]))
                 record0.append([score0, score1, qrolls])
-                score0, score1, prev0 = complete_turn(qrolls, score0, score1, prev0)
+                score0, score1, prev0 = complete_turn1(qrolls, score0, score1, prev0)
                 score0, score1, prev1 = int(round(score0)), int(round(score1)), int(round(prev0))
                 if score0>100: score0=100
                 if score1>100: score1=100
@@ -133,14 +156,14 @@ def main(games):
             if random.uniform(0, 1) < epsilon or score1==0:
                 randrolls = random.randint(0, 10)
                 record1.append([score0, score1, randrolls])
-                score1, score0, prev1 = complete_turn(randrolls, score1, score0, prev1)
+                score1, score0, prev1 = complete_turn0(randrolls, score1, score0, prev1)
                 score1, score0, prev1 = int(round(score1)), int(round(score0)), int(round(prev1))
                 if score0>100: score0=100
                 if score1>100: score1=100
             else:
                 qrolls = int(np.argmax(Q[score0, score1, :]))
                 record1.append([score0, score1, qrolls])
-                score1, score0, prev1 = complete_turn(qrolls, score1, score0, prev1)
+                score1, score0, prev1 = complete_turn1(qrolls, score1, score0, prev1)
                 score1, score0, prev1 = int(round(score1)), int(round(score0)), int(round(prev1))
                 if score0>100: score0=100
                 if score1>100: score1=100
@@ -153,4 +176,32 @@ def main(games):
                     update(record1[i][0], record1[i][1], record1[i][2], record1[i + 1][0], record1[i + 1][1])
                 break
 
-main(100)
+#Train and save Q values
+#main(100000)
+#np.save('hogvalues.npy',Q)
+
+#Load Q Values
+Q=np.load('hogvalues.npy')
+
+# Functions to play against the bot as a human
+def RLstrategy(score0,score1):
+    choice = int(np.argmax(Q[score0, score1, :]))
+    print("RL Choice: {} Rolls".format(choice))
+    return choice
+
+def HumanStrategy(score0,score1):
+    choice = int(input("Input:"))
+    return choice
+
+score0, score1, prev0, prev1 = 0, 0, 0, 0
+
+# Play against bot
+while True:
+    score0, score1, prev0 = complete_turn0(RLstrategy(score0,score1), score0, score1, prev0, dice=six_sided)
+    if score0>=100 or score1>=100: break
+    print("RL: {}, Human: {}".format(score0, score1))
+    score0, score1, prev1 = complete_turn1(HumanStrategy(score0,score1), score0, score1, prev1, dice=six_sided)
+    if score0>=100 or score1>=100: break
+    print("RL: {}, Human: {}".format(score0,score1))
+
+
